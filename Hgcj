@@ -1,0 +1,29 @@
+hhhj
+
+loki.process "docker" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.template {
+    source   = "line_with_task"
+    template = "{{ if .Labels.ecs_task_id }}task_id={{ .Labels.ecs_task_id }} {{ end }}{{ .Entry }}"
+  }
+
+  stage.output {
+    source = "line_with_task"
+  }
+
+  # 避免高基数 label
+  stage.label_drop {
+    values = ["ecs_task_id"]
+  }
+}
+
+
+rule {
+  source_labels = [
+    "__meta_docker_container_label_com_amazonaws_ecs_task_arn"
+  ]
+  # 含义：匹配“最后一个 / 后面的所有字符”
+  regex        = ".*/([^/]+)$"
+  target_label = "ecs_task_id"
+}
