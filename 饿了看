@@ -1,0 +1,44 @@
+行，就按你这个 entrypoint.sh（source startup.sh）来配一套完整 sample。
+
+1) entrypoint.sh（你已经有了）
+
+#!/usr/bin/env sh
+set -eu
+
+# 在同一个 shell 里执行，保证 export 生效
+. /usr/local/bin/startup.sh
+
+exec "$@"
+
+2) Dockerfile sample（通用版，适合 Alpine/Debian/Ubuntu 类镜像）
+
+FROM alpine:3.20
+
+# 1) 拷贝脚本到一个与 user 无关的固定路径
+COPY startup.sh /usr/local/bin/startup.sh
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# 2) 给执行权限
+RUN chmod +x /usr/local/bin/startup.sh /usr/local/bin/entrypoint.sh
+
+# 3) 设置入口：保证容器每次启动都会走 entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# 4) 默认启动命令：你换成你的真实服务/命令
+#    例如：["python", "app.py"] 或 ["./my-server"]
+CMD ["sh", "-c", "echo app start; sleep 3600"]
+
+3) 你可以这样验证
+
+docker build -t myimg .
+docker run --rm myimg
+
+如果你想覆盖 CMD：
+
+docker run --rm myimg sh -c 'echo hello; env | grep AWS_ || true'
+
+重要小提醒（跟你脚本强相关）
+	•	因为你用的是 . /usr/local/bin/startup.sh，所以 startup.sh 里不要写 exit（会直接把 entrypoint 退出，容器就没了）。
+	•	startup.sh 里可以 export AWS_...，主进程能拿到（这是 source 的意义）。
+
+如果你把你真实的“主程序启动命令”告诉我（比如是 java -jar ... / python app.py / nginx -g ... / gunicorn ...），我可以把 CMD [...] 帮你改成最贴近你项目的一版。
