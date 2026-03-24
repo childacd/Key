@@ -1,0 +1,282 @@
+好，我给你整理成一份中文版本的工程设计文档（可直接丢给 Claude Code 实现），我会保持“工程可执行性”，不是泛泛而谈。
+
+📄 Dev EC2 按用户隔离 + 数据持久化方案设计文档
+
+1. 背景
+
+当前 AWS 资源的创建流程如下：
+	1.	通过 Jenkins Pipeline 作为触发入口
+	2.	Pipeline 运行在 Jenkins Node（非本团队维护）
+	3.	使用 Jenkins Ansible Plugin 执行 Playbook
+	4.	Playbook 连接到一台指定的 EC2（Terraform 执行机）
+	5.	在该 EC2 上执行 Terraform 命令（init / apply）
+	6.	最终完成 AWS 资源创建
+
+2. 问题描述
+
+当前存在如下需求：
+
+	为每位开发人员提供一台独立的开发用 EC2 实例
+
+但存在限制：
+	•	公司 AMI 每月更新
+	•	EC2 实例需要随着 AMI 更新而重建
+	•	开发人员的数据不能丢失
+
+3. 目标
+
+设计一套方案，实现：
+	1.	每个用户只拥有 一台 EC2 Instance
+	2.	Instance 可以随 AMI 更新被重建
+	3.	用户数据在 Instance 重建后仍然存在
+	4.	用户可以：
+	•	自定义 Instance Type
+	•	指定 Data Volume 大小
+	•	后续支持扩容
+	5.	Terraform state 按用户隔离（不共享）
+	6.	Data Volume 具备删除保护机制
+
+4. 整体架构设计
+
+每个用户资源结构如下：
+
+User
+ ├── EC2 Instance（随 AMI 更新重建）
+ └── EBS Data Volume（长期持久化）
+
+设计核心：
+	•	EC2：无状态（可随时销毁）
+	•	EBS：有状态（长期保留）
+
+5. Jenkins Pipeline 设计
+
+5.1 参数设计
+
+参数名	是否必填	说明
+username	否	默认使用 Jenkins 当前用户
+instance_type	是	EC2 实例规格
+volume_size	是	数据盘大小（GB）
+
+5.2 username 处理逻辑
+
+如果用户未传入 username：
+	•	使用 Jenkins 内置变量（如 BUILD_USER_ID）
+
+用途：
+	•	Terraform backend 隔离
+	•	AWS 资源命名
+
+5.3 Pipeline 行为
+
+Pipeline 执行流程：
+	1.	获取参数（username / instance_type / volume_size）
+	2.	调用 Ansible Playbook
+	3.	Playbook 在目标 EC2 上执行 Terraform
+	4.	Terraform apply 资源
+
+6. Terraform 设计
+
+6.1 State 隔离（关键要求）
+
+每个用户必须使用独立的 Terraform state。
+
+示例（S3 backend）：
+
+bucket = "<terraform-state-bucket>"
+key    = "dev-ec2/${username}/terraform.tfstate"
+region = "<region>"
+
+效果：
+	•	用户之间互不影响
+	•	支持并发执行
+
+6.2 资源命名规范
+
+必须使用 username 作为唯一标识：
+
+EC2 Instance: dev-${username}
+EBS Volume:   dev-${username}-data
+
+目的：
+	•	避免重复创建资源
+	•	保证幂等性
+
+6.3 EC2 Instance
+
+要求：
+	•	使用最新 AMI（可通过变量或 data source 获取）
+	•	当 AMI 更新时，必须触发 Instance 替换
+
+6.4 EBS Data Volume
+
+要求：
+	•	独立于 EC2 生命周期
+	•	支持扩容
+	•	不允许被误删
+
+示例：
+
+resource "aws_ebs_volume" "data" {
+  size = var.volume_size
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = {
+    Name       = "dev-${var.username}-data"
+    Owner      = var.username
+    Persistent = "true"
+  }
+}
+
+6.5 Volume 挂载
+
+resource "aws_volume_attachment" "data_attach" {
+  device_name = "/dev/xvdf"
+  volume_id   = aws_ebs_volume.data.id
+  instance_id = aws_instance.dev.id
+}
+
+6.6 Volume 扩容
+	•	当 volume_size 变大：
+	•	Terraform 自动扩容
+	•	不允许重建 Volume
+
+7. 实例初始化（关键）
+
+7.1 目标
+
+Instance 启动时必须完成：
+	1.	检测 Data Volume
+	2.	若未格式化 → 执行格式化
+	3.	挂载到 /data
+	4.	写入 /etc/fstab 实现持久挂载
+
+7.2 推荐实现方式
+
+使用 EC2 user_data
+
+示例逻辑：
+
+1. 检测设备是否存在
+2. 判断是否已有文件系统
+3. 若没有 → mkfs
+4. 挂载到 /data
+5. 写入 fstab
+
+8. AMI 更新行为
+
+当 AMI 更新时：
+	•	Terraform 替换 EC2 Instance
+	•	EBS Volume 不会被删除
+	•	Volume 会重新挂载到新 Instance
+	•	用户数据保留
+
+9. 数据保护机制
+
+9.1 Terraform 层保护
+
+lifecycle {
+  prevent_destroy = true
+}
+
+9.2 Tag 标识
+
+所有资源必须包含：
+
+Owner = username
+Persistent = true
+
+9.3（可选）IAM 限制
+
+可以限制：
+	•	删除 EBS Volume
+	•	创建 Snapshot
+
+10. 使用场景说明
+
+场景1：首次执行
+	•	创建 EC2 + Volume
+
+场景2：重复执行
+	•	无变化（幂等）
+
+场景3：修改 instance_type
+	•	Instance 更新或重建
+
+场景4：扩容 volume
+	•	Volume 扩容（数据保留）
+
+场景5：AMI 更新
+	•	Instance 重建
+	•	Volume 重新挂载
+	•	数据保留 ✅
+
+11. 并发控制
+
+问题：
+	•	同一用户同时触发多个 Pipeline
+
+解决方案：
+	•	Jenkins 加锁（按 username 维度）
+
+12. 边界情况
+
+12.1 设备名变化
+	•	不应依赖 /dev/xvdf
+	•	必须使用 UUID 挂载
+
+12.2 Volume 未成功卸载
+	•	Terraform 自动重试
+	•	需保证依赖关系正确
+
+12.3 新 Volume 初始化
+	•	必须判断是否已格式化
+	•	避免重复 mkfs 导致数据丢失
+
+13. 交付内容（Claude Code 需要实现）
+
+1. Terraform Module
+	•	EC2 Instance
+	•	EBS Volume
+	•	Volume Attachment
+	•	Backend 配置（支持 username 参数）
+
+2. Jenkinsfile
+	•	参数定义
+	•	username 自动获取
+	•	调用 Ansible
+
+3. Ansible Playbook
+	•	SSH 到 Terraform 执行机
+	•	执行：
+	•	terraform init
+	•	terraform apply
+
+4. user_data 脚本
+	•	自动格式化（首次）
+	•	自动挂载 /data
+	•	写入 fstab
+
+14. 验收标准（必须满足）
+
+以下流程必须成功：
+	1.	用户创建 EC2
+	2.	在 /data 写入数据
+	3.	更新 AMI
+	4.	重新执行 Pipeline
+	5.	新 Instance 启动
+	6.	/data 数据仍然存在 ✅
+
+✅ 一句话总结
+
+该方案实现的是：
+
+	基于 Jenkins + Ansible + Terraform，为每个用户提供“可重建的 EC2 + 持久化 EBS 数据卷”的开发环境体系，并支持 AMI 无损升级。
+
+如果你下一步要更实战一点，我可以帮你做三件很有价值的事：
+
+1️⃣ 把这个文档变成 Claude Code 专用 Prompt（一步生成代码）
+2️⃣ 帮你提前写好 Terraform module（基本不会出错的那种）
+3️⃣ 帮你 review Claude 生成的代码（这里最容易踩坑，尤其是 volume + attach + user_data）
