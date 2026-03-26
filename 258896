@@ -1,0 +1,5 @@
+有几个要调整的地方，我说一下，第一个，嗯，边栏打开的时候，主页面会变灰，能不能不让它变灰，对。然后第二个这个，Table driven automation, 既然有了那个，view screenshot from dream, 就不需要再在那个HTML里面写那个table的内容啊，就是可以把那些东西删掉，你明白我的意思吧？就是我直接点那个screenshot就可以了。然后这个table driven.Automation的这部分，嗯，你可以把那个边栏的handler code里的sql generation example拿出来放在这儿，因为在这个阶段他是。Semi automated, 那么我们要做的就是去插入这个sql 所以我会在这里提一下
+
+然后那个伪代码里面第四点Extract JSON和Insert Copy Drops via Gmail SQL,这个部分你好像只写了注释,没写伪代码,你可以写一下。
+
+然后那个validation decision tree这个部分,和下面的decision flow summary你可以结合起来,这两个部分稍微有点冗余,对,因为你上面提到了哪些validator是retriable的,下面你在那个flow summary里面又提了,对。 然后下面那个execution pipeline,你就这个部分也可以跟上面的部分有点冗余,你也可以去掉,也就是说你可以在上面的那个decision flow summary的那个,这个名字可以稍微改一下,然后可以在这个summary里面把那个异步的去check result也放进来。对。 然后还有一个就是说,编栏里现在有两个图,一个是success email,一个是validation error email,这两个部分我觉得你就像那个table的截图一样,给我放在正文里面,然后你给我点一个view screenshot from gmail,就可以了。就是我在正文里面把这两个图点出来,你就不需要加在编栏里面了。然后这两个图加在正文的什么地方,你就看就是在讲解这两个部分的地方放就可以了。
