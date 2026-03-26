@@ -1,0 +1,178 @@
+我先说结论：可以做 animation，但不建议“全动画化”。
+更好的方案是 👉 “PPT 主体 + 局部动画增强”，这样既清晰又有亮点，也更容易让 Claude Code 落地。
+
+🎯 为什么不建议全动画
+
+你的这个内容本质是：
+	•	架构 + 流程 + 演进
+	•	偏“工程逻辑讲解”
+
+👉 这种内容如果全做动画会有几个问题：
+	•	❌ 信息密度高 → 动画容易看不懂
+	•	❌ 同事无法回看（PPT还能翻）
+	•	❌ Claude Code 生成复杂动画成本很高（容易翻车）
+	•	❌ 你讲的时候节奏不好控
+
+✅ 最优方案（推荐）
+
+👉 结构：PPT（主） + 流程动画（辅）
+
+🧩 方案结构
+
+类型	用途	建议
+PPT	讲背景 /架构 /设计	✅ 必须
+动画（1~2个）	展示流程演进	✅ 加分项
+Demo（可选）	展示效果	⭐ bonus
+
+🎬 建议你做的 Animation（重点）
+
+你这个项目最适合做动画的地方只有一个：
+
+👉 End-to-End Flow（核心流程演进）
+
+动画1：Before（手动流程）
+	•	User 提 ticket
+	•	Engineer 手动执行 mc command
+	•	手动 check history
+
+👉 表现为：
+	•	人（icon） + terminal + 手动箭头
+
+动画2：After（自动化流程）
+	•	ServiceNow → Event Bridge → DB → Copy Job → History → Notification
+
+👉 表现为：
+	•	自动流动的 pipeline（箭头流动动画）
+
+👉 这一个动画就足够让你“很亮眼”了
+
+🧠 给 Claude Code 的实现建议（很关键）
+
+你不要只说“帮我做动画”，要给它明确技术方案👇
+
+📄 给 Claude Code 的需求文档（你可以直接用）
+
+🎯 目标
+
+生成一套技术分享材料，包括：
+	1.	一份结构清晰的 PPT（Markdown / Slide）
+	2.	一个流程动画（用于展示系统演进）
+
+📦 输出形式
+
+1️⃣ PPT
+
+格式任选：
+	•	Markdown（适配 Marp / Slidev）
+	•	或 PowerPoint（.pptx）
+
+2️⃣ 动画（选一个实现方式）
+
+优先级如下：
+	1.	HTML + CSS + JS 动画（推荐）
+	2.	或 SVG 动画
+	3.	或 Lottie JSON
+
+🧩 PPT 内容结构
+
+# Mizumi Object Storage Copy Automation
+
+## 1. Background
+## 2. Problem (Manual Process)
+## 3. Phase 1 Automation
+## 4. Phase 2 (ServiceNow Integration)
+## 5. Architecture
+## 6. Workflow
+## 7. Validator Design
+## 8. Execution Model
+## 9. Impact
+## 10. Future Work
+
+🎬 动画需求（重点）
+
+🎯 动画名称
+
+Object Storage Copy Workflow Evolution
+
+🎞 动画分为 2 个 Scene
+
+Scene 1：Before（Manual Process）
+
+元素：
+	•	User（icon）
+	•	ServiceNow Ticket
+	•	Engineer（icon）
+	•	Terminal（mc command）
+	•	Object Storage
+
+动作流程：
+	1.	User 提交 ticket
+	2.	箭头 → Engineer
+	3.	Engineer 手动输入 command
+	4.	箭头 → Object Storage
+	5.	Engineer 手动 check 状态
+
+动画效果：
+	•	箭头逐步出现（step-by-step）
+	•	Terminal typing effect（可选）
+
+Scene 2：After（Automation）
+
+元素：
+	•	ServiceNow
+	•	Event Bridge
+	•	Validator
+	•	Copy Job Table
+	•	Copy Worker
+	•	History Table
+	•	Notification（Email / Ticket）
+
+动作流程：
+	1.	Ticket → Event Bridge
+	2.	Event Bridge → Validator（通过）
+	3.	→ Copy Job Table
+	4.	→ Copy Worker（执行）
+	5.	→ History Table
+	6.	→ Notification（回写 Ticket + Email）
+
+动画效果：
+	•	数据流动（flow animation）
+	•	节点高亮（active node）
+	•	成功状态（绿色 check）
+
+🎨 风格要求
+	•	风格：Tech / Clean / Minimal
+	•	配色：
+	•	蓝色（主流程）
+	•	绿色（成功）
+	•	红色（reject）
+	•	字体：简洁（类似系统默认 sans-serif）
+
+⚙️ 技术要求
+	•	不依赖复杂框架（避免运行困难）
+	•	可以本地打开（HTML 即可运行）
+	•	动画时长：30~60 秒
+
+🧠 加分点（可选）
+	•	支持“暂停 / 播放”
+	•	支持逐步播放（类似 PPT）
+
+🚀 我给你的建议（很重要）
+
+你这个分享如果这样做：
+
+👉 PPT（讲清楚） + 一个动画（秀一下）
+
+效果会是：
+	•	✅ 比普通 PPT 高一个 level
+	•	✅ 不会过度复杂
+	•	✅ 非常适合工程分享（而不是产品发布会）
+
+如果你下一步要优化（我可以帮）
+
+我可以帮你做三件很有用的事：
+	1.	🎤 帮你写一份演讲稿（你照着讲就行）
+	2.	🧠 帮你标出**“哪一页是重点 / 面试可以讲的点”**
+	3.	🇬🇧 给你一版英文表达（工程师地道说法）
+
+你这个项目其实已经是一个很好的“自动化平台设计案例”了，稍微包装一下是可以当面试项目讲的 👍
